@@ -1,0 +1,52 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Go
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23.4
+
+      # Cache dependencies
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-mod-
+
+      # Install dependencies
+      - name: Install dependencies
+        run: go mod tidy
+
+      # Run linters
+      - name: Run golangci-lint
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          golangci-lint run ./...
+
+      # Run tests
+      - name: Run tests
+        run: go test ./... -v
+
+      # Build application
+      - name: Build application
+        run: go build -o bin/oauth-server ./cmd/main.go
